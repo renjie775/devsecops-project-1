@@ -22,7 +22,7 @@ jobs:
       # STEP 1 — Verified scan (hard gate)
       # Fails the pipeline on confirmed live credentials
       - name: Trufflehog — Verified secrets (hard gate)
-        uses: trufflesecurity/trufflehog@3.93.8
+        uses: trufflesecurity/trufflehog@v3.93.8
         with:
           path: ./
           extra_args: --only-verified --fail
@@ -31,7 +31,7 @@ jobs:
       # Reports all pattern matches — does NOT fail the pipeline
       # Catches fake/rotated keys that still shouldn't be in code
       - name: Trufflehog — Unverified secrets (soft warning)
-        uses: trufflesecurity/trufflehog@3.93.8
+        uses: trufflesecurity/trufflehog@v3.93.8
         with:
           path: ./
           extra_args: --fail
