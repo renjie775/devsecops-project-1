@@ -11,6 +11,8 @@ jobs:
     name: Secret Scanning (Trufflehog)
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,16 +22,17 @@ jobs:
       # STEP 1 — Verified scan (hard gate)
       # Fails the pipeline on confirmed live credentials
       - name: Trufflehog — Verified secrets (hard gate)
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@3.93.8
         with:
           path: ./
-          extra_args: --only-verified
+          extra_args: --only-verified --fail
 
       # STEP 2 — Unverified scan (soft warning)
       # Reports all pattern matches — does NOT fail the pipeline
       # Catches fake/rotated keys that still shouldn't be in code
       - name: Trufflehog — Unverified secrets (soft warning)
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@3.93.8
         with:
           path: ./
+          extra_args: --fail
         continue-on-error: true         # Warning only — does not block merge
