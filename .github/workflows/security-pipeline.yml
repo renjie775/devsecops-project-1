@@ -1,0 +1,34 @@
+name: DevSecOps Security Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ─────────────────────────────────────────────────────────
+  # JOB 1 — SECRET SCANNING
+  # Runs FIRST — a leaked credential is the most
+  # critical finding. Fail fast on the worst problems.
+  #
+  # What it scans: entire git history, not just latest commit
+  # Why fetch-depth: 0 — secrets deleted in later commits
+  # are still exposed. Full history scan catches them.
+  # ─────────────────────────────────────────────────────────
+  secret-scan:
+    name: Secret Scanning (Trufflehog)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # Full git history — critical for secret scanning
+
+      - name: Run Trufflehog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./                  # Scan entire repository
+          base: main                # Compare against main branch
+          extra_args: --only-verified  # Only flag verified real secrets
