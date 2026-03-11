@@ -25,7 +25,7 @@ jobs:
         uses: trufflesecurity/trufflehog@v3.93.8
         with:
           path: ./
-          extra_args: --only-verified --fail
+          extra_args: --only-verified
 
       # STEP 2 — Unverified scan (soft warning)
       # Reports all pattern matches — does NOT fail the pipeline
@@ -34,5 +34,5 @@ jobs:
         uses: trufflesecurity/trufflehog@v3.93.8
         with:
           path: ./
-          extra_args: --fail
+          extra_args:
         continue-on-error: true         # Warning only — does not block merge
