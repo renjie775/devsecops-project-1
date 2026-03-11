@@ -7,15 +7,6 @@ on:
     branches: [ main ]
 
 jobs:
-  # ─────────────────────────────────────────────────────────
-  # JOB 1 — SECRET SCANNING
-  # Runs FIRST — a leaked credential is the most
-  # critical finding. Fail fast on the worst problems.
-  #
-  # What it scans: entire git history, not just latest commit
-  # Why fetch-depth: 0 — secrets deleted in later commits
-  # are still exposed. Full history scan catches them.
-  # ─────────────────────────────────────────────────────────
   secret-scan:
     name: Secret Scanning (Trufflehog)
     runs-on: ubuntu-latest
@@ -24,11 +15,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0            # Full git history — critical for secret scanning
+          fetch-depth: 0
 
-      - name: Run Trufflehog
+      # STEP 1 — Verified scan (hard gate)
+      # Fails the pipeline on confirmed live credentials
+      - name: Trufflehog — Verified secrets (hard gate)
         uses: trufflesecurity/trufflehog@main
         with:
-          path: ./                  # Scan entire repository
-          base: main                # Compare against main branch
-          extra_args: --only-verified  # Only flag verified real secrets
+          path: ./
+          base: main
+          extra_args: --only-verified
+
+      # STEP 2 — Unverified scan (soft warning)
+      # Reports all pattern matches — does NOT fail the pipeline
+      # Catches fake/rotated keys that still shouldn't be in code
+      - name: Trufflehog — Unverified secrets (soft warning)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+        continue-on-error: true         # Warning only — does not block merge
