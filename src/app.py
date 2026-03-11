@@ -1,3 +1,8 @@
+# ── Scan Verification Note ───────────────────────────────────────
+# Job 1 verification run — Trufflehog scanning this commit
+# Added: March 2026
+# Expected result: 0 verified secrets, 0 unverified secrets
+# ─────────────────────────────────────────────────────────────────
 """
 DevSecOps Portfolio Project 1 — Intentionally Vulnerable Flask App
 WARNING: This code contains deliberate vulnerabilities for educational purposes.
