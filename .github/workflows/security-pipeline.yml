@@ -56,6 +56,9 @@ jobs:
   #   p/owasp-top-ten  — SQL injection, XSS, CMDi etc
   #   p/secrets        — hardcoded credentials (defence in depth)
   #   p/python         — Python-specific security patterns
+  #   sarif            standard output format for GitHub Security tab
+  #   error            exit code 1 on any findings = hard gate
+  #   src/             explicit target = source code only
   # ─────────────────────────────────────────────────────────
   sast-scan:
     name: SAST Scan (Semgrep)
@@ -63,23 +66,35 @@ jobs:
 
     permissions:
       contents: read
-      security-events: write  # Required to upload SARIF to GitHub Security tab
+      security-events: write        # Required to upload SARIF to Security tab
+
+    container:
+      image: semgrep/semgrep        # Official Semgrep Docker image
+      # Semgrep pre-installed, no pip install needed
+      # Pin to specific version in production:
+      # semgrep/semgrep:1.76.0
+
+    # Skip Dependabot PRs — no token access to run scans
+    if: github.actor != 'dependabot[bot]'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Semgrep
-        uses: semgrep/semgrep-action@v1
+      - name: Run Semgrep — full repo scan
+        run: |
+          semgrep scan \
+            --config p/owasp-top-ten \
+            --config p/secrets \
+            --config p/python \
+            --sarif \
+            --output semgrep-results.sarif \
+            --error \
+            src/
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()  # Upload even when scan finds issues
         with:
-          config: >-
-            p/owasp-top-ten
-            p/secrets
-            p/python
-          auditedAsRef: ""   # Full repo scan — not delta only.
-          # SAST must scan all code, not just files changed in this PR
-        env:
-          # SEMGREP_APP_TOKEN is optional for open source rules
-          # Required only for Semgrep Cloud Platform features
-          # Add via: GitHub repo → Settings → Secrets → Actions
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+          sarif_file: semgrep-results.sarif
+          category: semgrep
