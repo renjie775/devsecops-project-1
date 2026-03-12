@@ -1,38 +1,83 @@
+---
 name: DevSecOps Security Pipeline
 
-on:
+"on":
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
+  # ─────────────────────────────────────────────────────────
+  # JOB 1 — SECRET SCANNING
+  # Runs FIRST — a leaked credential is the most
+  # critical finding. Fail fast on the worst problems.
+  #
+  # fetch-depth: 0 — scan full git history, not just
+  # latest commit. Deleted secrets are still exposed.
+  # ─────────────────────────────────────────────────────────
   secret-scan:
     name: Secret Scanning (Trufflehog)
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # STEP 1 — Verified scan (hard gate)
-      # Fails the pipeline on confirmed live credentials
-      - name: Trufflehog — Verified secrets (hard gate)
+      # HARD GATE — verified secrets block the pipeline
+      - name: Trufflehog — Hard gate (verified secrets)
         uses: trufflesecurity/trufflehog@v3.93.8
         with:
           path: ./
           extra_args: --only-verified
 
-      # STEP 2 — Unverified scan (soft warning)
-      # Reports all pattern matches — does NOT fail the pipeline
-      # Catches fake/rotated keys that still shouldn't be in code
-      - name: Trufflehog — Unverified secrets (soft warning)
+      # SOFT WARNING — unverified patterns, never blocks PR
+      - name: Trufflehog — Soft warning (unverified patterns)
         uses: trufflesecurity/trufflehog@v3.93.8
         with:
           path: ./
-          extra_args:
-        continue-on-error: true         # Warning only — does not block merge
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 2 — SAST (Static Application Security Testing)
+  # Runs in PARALLEL with Job 1 — no dependency needed
+  # because it scans source code, not git history.
+  #
+  # Semgrep understands code structure and data flow.
+  # It traces tainted user input from source to sink.
+  # Trufflehog cannot do this — they are complementary.
+  #
+  # Rules used:
+  #   p/owasp-top-ten  — SQL injection, XSS, CMDi etc
+  #   p/secrets        — hardcoded credentials (defence in depth)
+  #   p/python         — Python-specific security patterns
+  # ─────────────────────────────────────────────────────────
+  sast-scan:
+    name: SAST Scan (Semgrep)
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write  # Required to upload SARIF to GitHub Security tab
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/owasp-top-ten
+            p/secrets
+            p/python
+        env:
+          # SEMGREP_APP_TOKEN is optional for open source rules
+          # Required only for Semgrep Cloud Platform features
+          # Add via: GitHub repo → Settings → Secrets → Actions
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
