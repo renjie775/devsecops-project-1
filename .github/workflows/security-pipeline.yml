@@ -76,6 +76,8 @@ jobs:
             p/owasp-top-ten
             p/secrets
             p/python
+          auditedAsRef: ""   # Full repo scan — not delta only.
+          # SAST must scan all code, not just files changed in this PR
         env:
           # SEMGREP_APP_TOKEN is optional for open source rules
           # Required only for Semgrep Cloud Platform features
